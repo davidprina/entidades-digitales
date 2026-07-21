@@ -1,4 +1,5 @@
 import type { SportsTeamPayload } from "../../types";
+import { safeHref } from "../../utils/url";
 
 export function SportsTeamView({ title, payload }: { title: string; payload: SportsTeamPayload }) {
   return (
@@ -61,11 +62,14 @@ export function SportsTeamView({ title, payload }: { title: string; payload: Spo
         <div className="card">
           <h2>Redes</h2>
           <div className="btn-row">
-            {Object.entries(payload.socialLinks).map(([name, href]) => (
-              <a key={name} href={href} target="_blank" rel="noreferrer" className="btn">
-                {name}
-              </a>
-            ))}
+            {Object.entries(payload.socialLinks).map(
+              ([name, href]) =>
+                safeHref(href) && (
+                  <a key={name} href={safeHref(href)} target="_blank" rel="noreferrer" className="btn">
+                    {name}
+                  </a>
+                ),
+            )}
           </div>
         </div>
       )}

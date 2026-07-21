@@ -10,7 +10,7 @@ Desarrollo por fases. No se avanza de fase sin ≥90% de cumplimiento funcional 
 - [x] **Fase 2 — Motor de slugs, acceso multicanal y reclamación** (completa)
 - [x] **Fase 3 — CRUD de entidades y modelado JSONB dinámico** (completa)
 - [x] **Fase 4 — Frontend y renderizado dinámico (mobile-first)** (completa)
-- [ ] Fase 5 — Testing de integración, seguridad y refinamiento
+- [x] **Fase 5 — Testing de integración, seguridad y refinamiento** (completa)
 
 ## Arquitectura
 
@@ -45,9 +45,25 @@ Desarrollo por fases. No se avanza de fase sin ≥90% de cumplimiento funcional 
 - vCard exporta un archivo `.vcf` descargable; identificación de emergencia expone botones directos de llamada y WhatsApp.
 - Verificado manualmente en viewport mobile (Playwright, iPhone 12) para los 7 tipos de entidad: renderizado, RBAC (sin botón de edición para visitantes no dueños), exportación `.vcf`, enlaces `tel:`/`wa.me` y descarga de QR.
 
+## Fase 5 — Testing, seguridad y refinamiento
+
+**Tests e2e:** `backend/src/__tests__/e2e-lifecycle.test.ts` recorre el ciclo completo de una entidad en un solo flujo continuo: código sin reclamar → registro → reclamación → vista pública → edición del `payload` → intento de edición/borrado por un usuario ajeno (denegado) → desactivación → listado en "mis entidades" → borrado → el código vuelve a estar libre (404).
+
+**Auditoría de seguridad** (`backend/src/__tests__/security.test.ts`):
+- El `password_hash` nunca se filtra en ninguna respuesta de auth; las contraseñas se guardan hasheadas con bcrypt.
+- Un JWT alterado o firmado con otro secreto es rechazado (401).
+- Protección contra mass assignment: un `userId`, `isClaimed` o `id` enviados en el body de creación son ignorados; la propiedad siempre se deriva del usuario autenticado.
+- Un usuario no propietario no puede escalar cambiando el `entity_type` u otros campos vía `PATCH` (403), verificado también contra RBAC cruzado en `entity.crud.test.ts`.
+- Body de requests limitado a 256kb (rechaza payloads gigantes con 413).
+- Slugs con intentos de path traversal o de inyección de script son rechazados por la validación de formato antes de tocar la base de datos.
+- Rate limiting (20 intentos / 15 min) en `/api/auth/register` y `/api/auth/login` contra fuerza bruta.
+- CORS configurable por variable de entorno (`CORS_ORIGIN`) en vez de aceptar cualquier origen sin control explícito.
+
+**Refinamiento:** compresión gzip de respuestas, manejo correcto de errores HTTP nativos de Express (antes devolvían 500 en vez del código correcto, p. ej. 413 por payload excedido), `ErrorBoundary` en el frontend para fallos de UI no controlados, y saneamiento de URLs provistas por el usuario (`socialLinks`, `website`) antes de renderizarlas como enlaces, para evitar URIs `javascript:`.
+
 ## Tests
 
-49 tests de integración de backend (Jest + Supertest) contra una base de datos Postgres real: autenticación, modelo `Entity`, resolución/reclamación de slugs, CRUD y RBAC de entidades para los 7 tipos.
+59 tests de integración de backend (Jest + Supertest) contra una base de datos Postgres real: autenticación, modelo `Entity`, resolución/reclamación de slugs, CRUD y RBAC de entidades para los 7 tipos, auditoría de seguridad y ciclo de vida e2e completo.
 
 ## Cómo correr el proyecto localmente
 

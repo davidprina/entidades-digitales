@@ -25,6 +25,15 @@ export function errorHandler(
     return;
   }
 
+  // Errors thrown by Express/body-parser itself (e.g. PayloadTooLargeError,
+  // malformed-JSON SyntaxError) carry an HTTP statusCode but aren't ZodError/AppError.
+  const status = (err as { statusCode?: number; status?: number } | null)?.statusCode
+    ?? (err as { statusCode?: number; status?: number } | null)?.status;
+  if (typeof status === "number" && status >= 400 && status < 500) {
+    res.status(status).json({ error: "bad_request", message: (err as Error).message });
+    return;
+  }
+
   // eslint-disable-next-line no-console
   console.error(err);
   res.status(500).json({ error: "internal_error", message: "Something went wrong" });
