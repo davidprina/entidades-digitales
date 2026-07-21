@@ -125,6 +125,17 @@ export async function listMyEntities(req: AuthenticatedRequest, res: Response): 
   res.status(200).json({ entities: entities.map((e) => toPublicEntity(e, req.user!.id)) });
 }
 
+export async function getMyEntity(req: AuthenticatedRequest, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new AppError(401, "Not authenticated");
+  }
+
+  const { id } = idParamSchema.parse(req.params);
+  const entity = await loadOwnedEntity(id, req.user.id);
+
+  res.status(200).json({ entity: toPublicEntity(entity, req.user.id) });
+}
+
 export async function createEntity(req: AuthenticatedRequest, res: Response): Promise<void> {
   if (!req.user) {
     throw new AppError(401, "Not authenticated");

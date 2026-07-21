@@ -310,6 +310,48 @@ describe("DELETE /api/entities/:id (RBAC)", () => {
   });
 });
 
+describe("GET /api/entities/:id (RBAC)", () => {
+  async function createCatalog(token: string) {
+    const res = await request(app)
+      .post("/api/entities")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ entityType: "catalog", title: "Tienda", payload: { products: [] } });
+    return res.body.entity as { id: string };
+  }
+
+  it("lets the owner fetch their entity by id", async () => {
+    const { token } = await registerAndGetToken("get-owner@example.com");
+    const entity = await createCatalog(token);
+
+    const res = await request(app)
+      .get(`/api/entities/${entity.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.entity.id).toBe(entity.id);
+  });
+
+  it("rejects fetching another user's entity", async () => {
+    const owner = await registerAndGetToken("get-owner-2@example.com");
+    const entity = await createCatalog(owner.token);
+
+    const intruder = await registerAndGetToken("get-intruder@example.com");
+    const res = await request(app)
+      .get(`/api/entities/${entity.id}`)
+      .set("Authorization", `Bearer ${intruder.token}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  it("requires authentication", async () => {
+    const { token } = await registerAndGetToken("get-noauth@example.com");
+    const entity = await createCatalog(token);
+
+    const res = await request(app).get(`/api/entities/${entity.id}`);
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("GET /api/entities/mine", () => {
   it("lists only the authenticated user's entities", async () => {
     const userA = await registerAndGetToken("mine-a@example.com");
