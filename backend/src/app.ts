@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import authRoutes from "./routes/auth.routes";
+import entityRoutes from "./routes/entity.routes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 
 export function createApp(): Express {
@@ -16,6 +17,7 @@ export function createApp(): Express {
   });
 
   app.use("/api/auth", authRoutes);
+  app.use("/api/entities", entityRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
